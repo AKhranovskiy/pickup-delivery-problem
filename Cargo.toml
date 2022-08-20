@@ -1,8 +1,14 @@
 [package]
 name = "pickup-delivery-problem"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
-
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+anyhow = "1.0.62"
+indoc = "1.0.7"
+itertools = "0.10.3"
+log = "0.4.17"
+petgraph = "0.6.2"
+rand = "0.8.5"
+simple-log = "1.6.0"
