@@ -5,58 +5,63 @@ mod input;
 pub mod model;
 mod network;
 mod output;
-mod solvers;
+mod solver;
 
+use model::Station;
 use network::Network;
-use solvers::{
-    deliver_order_by_nearest_train_multiload_collection,
-    deliver_order_by_nearest_train_multiload_distribution, deliver_with_nearest_train,
-};
+use solver::{OrderSorter, Solver, SolverResult};
 
 pub use crate::input::Input;
-pub use crate::output::Output;
+pub use crate::output::Solution;
 
-pub fn solve(input: &Input) -> anyhow::Result<Output> {
+pub fn solve(input: &Input) -> anyhow::Result<Solution> {
     let network = Network::from(input);
 
+    let distance: &dyn Fn(&Station, &Station) -> u32 = &|from, to| network.distance(from, to);
     let trains = input.trains().to_vec();
     let orders = input.orders().to_vec();
 
-    let mut orders_sorted_by_weight_asc = orders.clone();
-    orders_sorted_by_weight_asc.sort_by_key(|o| o.weight());
+    let sorters: &[&dyn OrderSorter] = &[
+        &solver::DoNotSortOrders,
+        &solver::SortOrdersByDistanceAsc::new(distance),
+        &solver::SortOrdersByDistanceDesc::new(distance),
+        &solver::SortOrdersByNameAsc,
+        &solver::SortOrdersByNameDesc,
+        &solver::SortOrdersRandomly,
+    ];
 
-    let mut orders_sorted_by_weight_desc = orders_sorted_by_weight_asc.clone();
-    orders_sorted_by_weight_desc.reverse();
+    let solver = Solver::new(
+        &[
+            &solver::NearestTrainSingleOrderAlgorithm,
+            &solver::NearestTrainOrderDistributionAlgorithm,
+            &solver::NearestTrainOrderCollectionAlgorithm,
+        ],
+        sorters,
+        distance,
+    );
 
-    let mut orders_sorted_by_dist_desc = orders.clone();
-    orders_sorted_by_dist_desc.sort_by_key(|o| network.distance(&o.location(), &o.destination()));
+    let solutions = solver.solve(orders, trains)?;
 
-    let mut orders_sorted_by_dist_asc = orders_sorted_by_dist_desc.clone();
-    orders_sorted_by_dist_asc.reverse();
-    [
-        orders,
-        orders_sorted_by_dist_asc,
-        orders_sorted_by_dist_desc,
-        orders_sorted_by_weight_asc,
-        orders_sorted_by_weight_desc,
-    ]
-    .into_iter()
-    .flat_map(|orders| {
-        [
-            deliver_with_nearest_train(&network, trains.clone(), orders.clone()),
-            deliver_order_by_nearest_train_multiload_distribution(
-                &network,
-                trains.clone(),
-                orders.clone(),
-            ),
-            deliver_order_by_nearest_train_multiload_collection(&network, trains.clone(), orders),
-        ]
-    })
-    .collect::<Result<Vec<Output>, _>>()?
-    .into_iter()
-    .inspect(|o| println!("Total time: {}", o.total_time()))
-    .min_by_key(|o| o.total_time())
-    .ok_or_else(|| anyhow::anyhow!("No best solution?"))
+    print_statistic(&solutions);
+
+    solutions
+        .into_iter()
+        .next()
+        .map(|r| r.solution)
+        .ok_or_else(|| anyhow::anyhow!("no solution found"))
+}
+
+fn print_statistic(results: &[SolverResult]) {
+    for (i, result) in results.iter().enumerate().take(10).rev() {
+        println!(
+            "{:>2} {:<50?} / {:<50?}  {:>3}ms {:>3}",
+            i + 1,
+            result.algorithm,
+            result.order_sorter,
+            result.elapsed.as_millis(),
+            result.solution.total_time()
+        );
+    }
 }
 
 #[cfg(test)]

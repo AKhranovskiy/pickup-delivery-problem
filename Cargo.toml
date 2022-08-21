@@ -9,6 +9,7 @@ anyhow = "1.0.62"
 clap = { version = "3.2.17", features = ["derive"] }
 indoc = "1.0.7"
 itertools = "0.10.3"
+kdam = { version = "0.2.3", features = ["gradient"] }
 log = "0.4.17"
 petgraph = "0.6.2"
 rand = "0.8.5"

@@ -3,12 +3,11 @@ use std::iter::once;
 use itertools::Itertools;
 
 use crate::model::{Order, Station, Train};
-use crate::network::Network;
 
 /// Looks up a train with the nearest arrival time to `location` with at least `min_capacity`.
 /// It can only fail if there is no train with required capacity at all.
 pub fn find_nearest_train(
-    network: &Network,
+    distance: &dyn Fn(&Station, &Station) -> u32,
     trains: &[Train],
     location: &Station,
     min_capacity: u32,
@@ -23,14 +22,14 @@ pub fn find_nearest_train(
         .map(|(index, train)| {
             (
                 index,
-                train.traveled_time() + network.distance(train.location(), location),
+                train.traveled_time() + distance(train.location(), location),
             )
         })
         .min_by_key(|(_, time)| *time)
 }
 
 pub fn calculate_best_route_for_distribution(
-    network: &Network,
+    distance: &dyn Fn(&Station, &Station) -> u32,
     start: &Station,
     destinations: &[Station],
 ) -> (Vec<Station>, u32) {
@@ -41,7 +40,7 @@ pub fn calculate_best_route_for_distribution(
                 once(start)
                     .chain(nodes.iter().map(|i| &destinations[*i]))
                     .tuples()
-                    .fold(0_u32, |acc, (a, b)| acc + network.distance(a, b)),
+                    .fold(0_u32, |acc, (a, b)| acc + distance(a, b)),
             )
         })
         // .inspect(|(stations, distance)| println!("{stations:?}: {distance}"))
@@ -50,12 +49,12 @@ pub fn calculate_best_route_for_distribution(
 }
 
 pub fn calculate_best_route_for_collection(
-    network: &Network,
+    distance: &dyn Fn(&Station, &Station) -> u32,
     stations: &[Station],
     destination: &Station,
 ) -> (Vec<Station>, u32) {
     let (mut route, distance) =
-        calculate_best_route_for_distribution(network, destination, stations);
+        calculate_best_route_for_distribution(&distance, destination, stations);
     route.reverse();
     (route, distance)
 }
@@ -96,8 +95,9 @@ pub fn group_orders_by_destination(orders: &[Order]) -> Vec<(Station, u32, Vec<&
 mod tests {
     use itertools::Itertools;
 
+    use crate::model::Station;
     use crate::network::Network;
-    use crate::solvers::utils::{
+    use crate::solver::utils::{
         calculate_best_route_for_collection, calculate_best_route_for_distribution,
     };
     use crate::Input;
@@ -108,6 +108,7 @@ mod tests {
             .expect("Test input");
 
         let network = Network::from(&input);
+        let distance: &dyn Fn(&Station, &Station) -> u32 = &|a, b| network.distance(a, b);
 
         let orders = input
             .orders()
@@ -123,7 +124,7 @@ mod tests {
                 let destinations = group.iter().map(|o| o.destination()).collect_vec();
 
                 let (route, distance) =
-                    calculate_best_route_for_distribution(&network, &start, &destinations);
+                    calculate_best_route_for_distribution(&distance, &start, &destinations);
                 (start, route, distance)
             })
             .collect_vec();
@@ -143,6 +144,7 @@ mod tests {
             .expect("Test input");
 
         let network = Network::from(&input);
+        let distance: &dyn Fn(&Station, &Station) -> u32 = &|a, b| network.distance(a, b);
 
         let orders = input
             .orders()
@@ -158,7 +160,7 @@ mod tests {
                 let pickup = group.iter().map(|o| o.location()).collect_vec();
 
                 let (route, distance) =
-                    calculate_best_route_for_collection(&network, &pickup, &destination);
+                    calculate_best_route_for_collection(&distance, &pickup, &destination);
                 (destination, route, distance)
             })
             .collect_vec();

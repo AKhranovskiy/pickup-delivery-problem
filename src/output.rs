@@ -30,12 +30,12 @@ impl Move {
     }
 }
 
-pub struct Output {
+pub struct Solution {
     moves: Vec<Move>,
     total_time: u32,
 }
 
-impl Output {
+impl Solution {
     pub fn new(moves: Vec<Move>, total_time: u32) -> Self {
         Self { moves, total_time }
     }
@@ -69,7 +69,7 @@ impl Output {
     }
 }
 
-impl ToString for Output {
+impl ToString for Solution {
     fn to_string(&self) -> String {
         let mut result = self
             .moves
