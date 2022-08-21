@@ -6,9 +6,11 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.62"
+clap = { version = "3.2.17", features = ["derive"] }
 indoc = "1.0.7"
 itertools = "0.10.3"
 log = "0.4.17"
 petgraph = "0.6.2"
 rand = "0.8.5"
-simple-log = "1.6.0"
+simple_logger = "2.2.0"
+simplelog = "0.12.0"

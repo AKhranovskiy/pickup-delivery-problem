@@ -1,9 +1,19 @@
 use anyhow::anyhow;
 
+use log::LevelFilter;
 use pickup_delivery_problem::{solve, Input};
+use simplelog::ConfigBuilder;
 
 fn main() -> anyhow::Result<()> {
-    simple_log::quick!("info");
+    simplelog::SimpleLogger::init(
+        LevelFilter::Info,
+        ConfigBuilder::new()
+            .set_time_level(LevelFilter::Off)
+            .set_target_level(LevelFilter::Off)
+            .set_thread_level(LevelFilter::Off)
+            .build(),
+    )
+    .unwrap();
 
     let input = std::env::args()
         .nth(1)

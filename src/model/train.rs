@@ -30,12 +30,9 @@ impl Train {
         &self.location
     }
 
-    pub fn move_to(self, destination: &Station, traveled_time: u32) -> Self {
-        Self {
-            location: destination.clone(),
-            traveled_time: self.traveled_time + traveled_time,
-            ..self
-        }
+    pub fn move_to(&mut self, destination: &Station, traveled_time: u32) {
+        self.location = destination.clone();
+        self.traveled_time += traveled_time;
     }
 
     pub fn traveled_time(&self) -> u32 {
