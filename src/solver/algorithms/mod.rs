@@ -16,4 +16,6 @@ pub trait Algorithm: std::fmt::Debug {
         trains: Vec<Train>,
         distance: &dyn Fn(&Station, &Station) -> u32,
     ) -> anyhow::Result<Solution>;
+
+    fn sort_sensitive(&self) -> bool;
 }

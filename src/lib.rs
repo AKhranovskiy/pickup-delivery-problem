@@ -32,9 +32,9 @@ pub fn solve(input: &Input) -> anyhow::Result<Solution> {
 
     let solver = Solver::new(
         &[
-            &solver::NearestTrainSingleOrderAlgorithm,
-            &solver::NearestTrainOrderDistributionAlgorithm,
             &solver::NearestTrainOrderCollectionAlgorithm,
+            &solver::NearestTrainOrderDistributionAlgorithm,
+            &solver::NearestTrainSingleOrderAlgorithm,
         ],
         sorters,
         distance,
@@ -57,7 +57,9 @@ fn print_statistic(results: &[SolverResult]) {
             "{:>2} {:<50?} / {:<50?}  {:>3}ms {:>3}",
             i + 1,
             result.algorithm,
-            result.order_sorter,
+            result
+                .order_sorter
+                .unwrap_or_else(|| &solver::DoNotSortOrders),
             result.elapsed.as_millis(),
             result.solution.total_time()
         );

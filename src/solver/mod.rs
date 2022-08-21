@@ -42,42 +42,43 @@ where
         orders: Vec<Order>,
         trains: Vec<Train>,
     ) -> anyhow::Result<Vec<SolverResult>> {
-        const UNSTABLE_SORTS: usize = 100;
+        let mut pb = tqdm!();
 
-        let iterations_per_algorithm = self
-            .order_sorters
-            .iter()
-            .map(|s| if s.stable() { 1 } else { UNSTABLE_SORTS })
-            .sum::<usize>();
-
-        let mut pb = tqdm!(total = self.algorithms.len() * iterations_per_algorithm);
-
-        let mut results = Vec::with_capacity(self.algorithms.len() * iterations_per_algorithm);
+        let mut results = Vec::new();
 
         for &algorithm in self.algorithms {
-            for &order_sorter in self.order_sorters {
-                let iterations = if order_sorter.stable() {
-                    1
-                } else {
-                    UNSTABLE_SORTS
-                };
-
-                for _ in 0..iterations {
-                    let now = Instant::now();
-                    let solution = algorithm.solve(
-                        order_sorter.sort(&orders).clone(),
-                        trains.clone(),
-                        &self.distance,
-                    )?;
-                    let result = SolverResult {
-                        elapsed: now.elapsed(),
-                        algorithm,
-                        order_sorter,
-                        solution,
-                    };
-                    results.push(result);
-                    pb.update(1);
+            if algorithm.sort_sensitive() {
+                // Iterate over sorters.
+                for &order_sorter in self.order_sorters {
+                    let iterations = if order_sorter.stable() { 1 } else { 100 };
+                    for _ in 0..iterations {
+                        let now = Instant::now();
+                        let solution = algorithm.solve(
+                            order_sorter.sort(&orders),
+                            trains.clone(),
+                            &self.distance,
+                        )?;
+                        let result = SolverResult {
+                            elapsed: now.elapsed(),
+                            algorithm,
+                            order_sorter: Some(order_sorter),
+                            solution,
+                        };
+                        results.push(result);
+                        pb.update(1);
+                    }
                 }
+            } else {
+                let now = Instant::now();
+                let solution = algorithm.solve(orders.clone(), trains.clone(), &self.distance)?;
+                let result = SolverResult {
+                    elapsed: now.elapsed(),
+                    algorithm,
+                    order_sorter: None,
+                    solution,
+                };
+                results.push(result);
+                pb.update(1);
             }
         }
         results.sort_by_key(|r| r.solution.total_time());
@@ -88,6 +89,6 @@ where
 pub struct SolverResult<'s> {
     pub elapsed: std::time::Duration,
     pub algorithm: &'s dyn Algorithm,
-    pub order_sorter: &'s dyn OrderSorter,
+    pub order_sorter: Option<&'s dyn OrderSorter>,
     pub solution: Solution,
 }

@@ -118,4 +118,8 @@ impl Algorithm for NearestTrainSingleOrderAlgorithm {
             trains.iter().map(Train::traveled_time).max().unwrap(),
         ))
     }
+
+    fn sort_sensitive(&self) -> bool {
+        true
+    }
 }
