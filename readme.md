@@ -26,9 +26,8 @@ cargo run --release --bin pdp -- src/data/generated.extralarge.1.txt
 - `NearestTrainOrderDistributionAlgorithm` groups orders by location, then looks up for the nearest train to pickup all orders and deliver to destinations via optimal route.
 - `NearestTrainSingleOrderAlgorithm` looks up the nearest train to deliver an order to the destination.
 
-The order list is sorted in various ways for each algorithm to increase chances to find optimal solution.
+The order list is sorted in various ways for sort-sensitive algorithm (`NearestTrainSingleOrderAlgorithm`) to increase chances to find optimal solution.
 There are "no-sort" that does not change the order, sorts by properties (weight, name, delivery distance) both ascending and descending, and one random sort that is used multiple times per algorithm.
-Note that `NearestTrainOrderCollectionAlgorithm` and `NearestTrainOrderDistributionAlgorithm` sort the order list on their own, so it is useless to apply multiple sorts for them although it can change in future.
 
 The program chooses a solution with the minimal total delivery time, and then outputs a list of moves for each train.
 
