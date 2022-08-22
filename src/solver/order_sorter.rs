@@ -130,3 +130,22 @@ impl OrderSorter for SortOrdersRandomly {
         false
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{OrderSorter, SortOrdersRandomly};
+
+    #[test]
+    fn test_random_sorter() {
+        let orders = [
+            ("a", 1, "b", "c").into(),
+            ("b", 2, "c", "d").into(),
+            ("c", 3, "d", "e").into(),
+            ("d", 4, "e", "f").into(),
+            ("e", 5, "f", "g").into(),
+        ];
+
+        // It is highly unlikely that the same order will be returned twice.
+        assert!(orders != SortOrdersRandomly.sort(&orders).as_slice());
+    }
+}

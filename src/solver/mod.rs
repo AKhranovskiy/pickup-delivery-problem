@@ -50,7 +50,7 @@ where
             if algorithm.sort_sensitive() {
                 // Iterate over sorters.
                 for &order_sorter in self.order_sorters {
-                    let iterations = if order_sorter.stable() { 1 } else { 100 };
+                    let iterations = if order_sorter.stable() { 1 } else { 1000 };
                     for _ in 0..iterations {
                         let now = Instant::now();
                         let solution = algorithm.solve(

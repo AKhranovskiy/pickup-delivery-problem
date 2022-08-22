@@ -51,6 +51,7 @@ pub fn solve(input: &Input) -> anyhow::Result<Solution> {
         .ok_or_else(|| anyhow::anyhow!("no solution found"))
 }
 
+#[cfg(debug_assertions)]
 fn print_statistic(results: &[SolverResult]) {
     for (i, result) in results.iter().enumerate().take(10).rev() {
         println!(
@@ -65,6 +66,8 @@ fn print_statistic(results: &[SolverResult]) {
         );
     }
 }
+#[cfg(not(debug_assertions))]
+fn print_statistic(_results: &[SolverResult]) {}
 
 #[cfg(test)]
 mod tests {
@@ -74,7 +77,6 @@ mod tests {
     static SIMPLE_INPUT: &str = include_str!("data/simple.txt");
 
     #[test]
-    #[ignore = "reason"]
     fn test_solve_simple_input() {
         let input = Input::try_from(SIMPLE_INPUT).expect("Test input");
         let solution = solve(&input).expect("Solve simple input");
@@ -83,8 +85,7 @@ mod tests {
             &solution.to_string(),
             indoc::indoc! {"
             W=0, T=Q1, N1=B, P1=[], N2=A, P2=[]
-            W=30, T=Q1, N1=A, P1=[K1], N2=B, P2=[]
-            W=60, T=Q1, N1=B, P1=[], N2=C, P2=[K1]
+            W=30, T=Q1, N1=A, P1=[K1], N2=C, P2=[K1]
         "}
         );
     }
