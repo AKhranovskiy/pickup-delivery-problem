@@ -1,3 +1,4 @@
+use anyhow::bail;
 use itertools::Itertools;
 
 use crate::model::{Order, Train};
@@ -124,8 +125,19 @@ impl Algorithm for NearestTrainOrderDistributionAlgorithm {
                     orders.retain(|o| o.name() != order);
                 });
             } else {
-                log::debug!("No orders delivered");
-                break;
+                bail!(
+                    "Failed to deliver orders: {}",
+                    orders
+                        .iter()
+                        .map(|o| format!(
+                            "{}[{}] {}=>{},",
+                            o.name(),
+                            o.weight(),
+                            o.location(),
+                            o.destination()
+                        ))
+                        .collect::<String>()
+                );
             }
         }
         Ok(Solution::new(

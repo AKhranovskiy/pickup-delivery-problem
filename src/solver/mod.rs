@@ -53,34 +53,44 @@ where
                     let iterations = if order_sorter.stable() { 1 } else { 1000 };
                     for _ in 0..iterations {
                         let now = Instant::now();
-                        let solution = algorithm.solve(
-                            order_sorter.sort(&orders),
-                            trains.clone(),
-                            &self.distance,
-                        )?;
-                        let result = SolverResult {
+
+                        let solution = algorithm
+                            .solve(order_sorter.sort(&orders), trains.clone(), &self.distance)
+                            .unwrap_or_else(|e| {
+                                log::error!("{algorithm:?} / {order_sorter:?}: {e:#?}");
+                                Solution::new(vec![], u32::MAX)
+                            });
+
+                        results.push(SolverResult {
                             elapsed: now.elapsed(),
                             algorithm,
                             order_sorter: Some(order_sorter),
                             solution,
-                        };
-                        results.push(result);
+                        });
                         pb.update(1);
                     }
                 }
             } else {
                 let now = Instant::now();
-                let solution = algorithm.solve(orders.clone(), trains.clone(), &self.distance)?;
-                let result = SolverResult {
+
+                let solution = algorithm
+                    .solve(orders.clone(), trains.clone(), &self.distance)
+                    .unwrap_or_else(|e| {
+                        log::error!("{algorithm:?} / None: {e:#?}");
+                        Solution::new(vec![], u32::MAX)
+                    });
+
+                results.push(SolverResult {
                     elapsed: now.elapsed(),
                     algorithm,
                     order_sorter: None,
                     solution,
-                };
-                results.push(result);
+                });
+
                 pb.update(1);
             }
         }
+
         results.sort_by_key(|r| r.solution.total_time());
         Ok(results)
     }
