@@ -20,8 +20,6 @@ impl Algorithm for NearestTrainOrderDistributionAlgorithm {
         trains: Vec<Train>,
         distance: &dyn Fn(&crate::model::Station, &crate::model::Station) -> u32,
     ) -> anyhow::Result<Solution> {
-        let max_train_capacity = trains.iter().map(|t| t.capacity()).max().unwrap();
-
         let mut orders = orders;
         let mut trains = trains;
 
@@ -34,11 +32,27 @@ impl Algorithm for NearestTrainOrderDistributionAlgorithm {
 
             let delivered = group_orders_by_location(&orders)
                 .iter()
-                .filter(|(_, w, _)| w <= &max_train_capacity)
                 .flat_map(|(location, w, order_refs)| {
-                    if let Some((train_index, available_at)) =
-                        find_nearest_train(&distance, &trains, location, *w)
-                    {
+                    // Try to deliver as many items as possible.
+                    let mut orders_to_deliver = order_refs.clone();
+                    orders_to_deliver.sort_by_key(|o| o.weight());
+                    orders_to_deliver.reverse();
+
+                    let mut nearest_train = None;
+
+                    while nearest_train.is_none() && !orders_to_deliver.is_empty() {
+                        let total_weight =
+                            orders_to_deliver.iter().map(|o| o.weight()).sum::<u32>();
+
+                        nearest_train =
+                            find_nearest_train(&distance, &trains, location, total_weight);
+
+                        if nearest_train.is_none() {
+                            orders_to_deliver.pop();
+                        }
+                    }
+
+                    if let Some((train_index, available_at)) = nearest_train {
                         // Remove train from the idle pool.
                         let mut train = trains.remove(train_index);
 
@@ -67,7 +81,10 @@ impl Algorithm for NearestTrainOrderDistributionAlgorithm {
                             train.move_to(location, distance(train.location(), location));
                         }
 
-                        let destinations = order_refs.iter().map(|o| o.destination()).collect_vec();
+                        let destinations = orders_to_deliver
+                            .iter()
+                            .map(|o| o.destination())
+                            .collect_vec();
                         let (route, _) = calculate_best_route_for_distribution(
                             &distance,
                             location,
@@ -75,7 +92,7 @@ impl Algorithm for NearestTrainOrderDistributionAlgorithm {
                         );
 
                         log::debug!("{location} load orders {order_refs:?}");
-                        let mut delivery = order_refs.clone();
+                        let mut delivery = orders_to_deliver.clone();
 
                         for station in &route {
                             order_refs
@@ -115,7 +132,10 @@ impl Algorithm for NearestTrainOrderDistributionAlgorithm {
                     } else {
                         log::error!("No train available for {location} with capacity {w}",);
                     }
-                    order_refs.iter().map(|o| o.name().to_owned()).collect_vec()
+                    orders_to_deliver
+                        .iter()
+                        .map(|o| o.name().to_owned())
+                        .collect_vec()
                 })
                 .collect_vec();
 

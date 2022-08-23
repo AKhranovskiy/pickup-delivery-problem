@@ -33,22 +33,42 @@ impl Algorithm for NearestTrainOrderCollectionAlgorithm {
 
             let delivered = group_orders_by_destination(&orders)
                 .iter()
-                .filter(|(_, w, _)| w <= &max_train_capacity)
+                // .filter(|(_, w, _)| w <= &max_train_capacity)
                 .flat_map(|(destination, w, order_refs)| {
-                    let pickups = order_refs.iter().map(|o| o.location()).collect_vec();
-                    let (mut route, _) =
-                        calculate_best_route_for_collection(&distance, &pickups, destination);
+                    // Try to collect as many items as possible.
+                    let mut orders_to_pickup = order_refs.clone();
+                    orders_to_pickup.sort_by_key(|o| o.weight());
+                    orders_to_pickup.reverse();
+
+                    let mut nearest_train = None;
+                    let mut route = vec![];
+
+                    while nearest_train.is_none() && !orders_to_pickup.is_empty() {
+                        let total_weight = orders_to_pickup.iter().map(|o| o.weight()).sum::<u32>();
+
+                        let pickups = orders_to_pickup.iter().map(|o| o.location()).collect_vec();
+
+                        route =
+                            calculate_best_route_for_collection(&distance, &pickups, destination).0;
+
+                        // Find the nearest train to the beginning of the route.
+                        let location = route.first().unwrap();
+
+                        nearest_train =
+                            find_nearest_train(&distance, &trains, location, total_weight);
+
+                        if nearest_train.is_none() {
+                            orders_to_pickup.pop();
+                        }
+                    }
 
                     route.push(destination.clone());
 
-                    // Find the nearest train to the beginning of the route.
-                    let location = route.first().unwrap();
-
-                    if let Some((train_index, available_at)) =
-                        find_nearest_train(&distance, &trains, location, *w)
-                    {
+                    if let Some((train_index, available_at)) = nearest_train {
                         // Remove train from the idle pool.
                         let mut train = trains.remove(train_index);
+
+                        let location = route.first().unwrap();
 
                         log::debug!(
                             "TRAIN {} from {} to {}, departure={}, arrival={}",
@@ -75,10 +95,10 @@ impl Algorithm for NearestTrainOrderCollectionAlgorithm {
                             train.move_to(location, distance(train.location(), location));
                         }
 
-                        let mut delivery: Vec<&Order> = Vec::with_capacity(order_refs.len());
+                        let mut delivery: Vec<&Order> = Vec::with_capacity(orders_to_pickup.len());
 
                         for (current, next) in route.iter().tuple_windows() {
-                            let mut to_collect = order_refs
+                            let mut to_collect = orders_to_pickup
                                 .iter()
                                 .filter(|o| &o.location() == current)
                                 .copied()
@@ -114,14 +134,29 @@ impl Algorithm for NearestTrainOrderCollectionAlgorithm {
                             train.move_to(next, distance(train.location(), next));
                         }
 
-                        assert!(delivery.len() == order_refs.len());
+                        assert!(delivery.len() == orders_to_pickup.len());
 
                         // Return train to the idle pool with updated time.
                         trains.push(train);
                     } else {
-                        log::error!("No train available for {location} with capacity {w}",);
+                        log::error!(
+                            "No train available for to deliver: {}",
+                            order_refs
+                                .iter()
+                                .map(|o| format!(
+                                    "{}[{}] {}=>{},",
+                                    o.name(),
+                                    o.weight(),
+                                    o.location(),
+                                    o.destination()
+                                ))
+                                .collect::<String>()
+                        );
                     }
-                    order_refs.iter().map(|o| o.name().to_owned()).collect_vec()
+                    orders_to_pickup
+                        .iter()
+                        .map(|o| o.name().to_owned())
+                        .collect_vec()
                 })
                 .collect_vec();
 

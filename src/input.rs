@@ -32,7 +32,7 @@ impl TryFrom<&str> for Input {
     type Error = anyhow::Error;
 
     fn try_from(input: &str) -> Result<Self, Self::Error> {
-        let mut lines = input.lines().peekable();
+        let mut lines = input.lines();
 
         let number_of_stations = lines
             .next()
@@ -50,9 +50,7 @@ impl TryFrom<&str> for Input {
         // TODO Validate stations.
 
         // Skip empty lines.
-        while let Some(&line) = lines.peek() && line.is_empty() {
-            lines.next();
-        }
+        let mut lines = lines.skip_while(|line| line.trim().is_empty());
 
         let number_of_edges = lines
             .next()
@@ -83,9 +81,7 @@ impl TryFrom<&str> for Input {
         // TODO Validate edges.
 
         // Skip empty lines.
-        while let Some(&line) = lines.peek() && line.is_empty() {
-            lines.next();
-        }
+        let mut lines = lines.skip_while(|line| line.trim().is_empty());
 
         let number_of_orders = lines
             .next()
@@ -116,9 +112,7 @@ impl TryFrom<&str> for Input {
         // TODO Validate orders.
 
         // Skip empty lines.
-        while let Some(&line) = lines.peek() && line.is_empty() {
-            lines.next();
-        }
+        let mut lines = lines.skip_while(|line| line.trim().is_empty());
 
         let number_of_trains = lines
             .next()
